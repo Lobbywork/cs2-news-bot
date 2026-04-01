@@ -5,6 +5,8 @@ import feedparser
 import re
 import time
 import html
+from threading import Thread
+from flask import Flask
 from telegram import Bot
 from telegram.error import TimedOut, NetworkError
 
@@ -13,12 +15,10 @@ TOKEN = "8592760077:AAF91JKp2G1PJSAwAChTZz3GII40DSwQrjo"
 CHANNEL_ID = "@Newskins_cs2"
 CONFIG_FILE = "config.json"
 
-# ТЕКСТ ДЛЯ РЕКЛАМНЫХ ПОСТОВ (меняй здесь когда нужно)
 PROMO_TEXT = """PGL Major Bucharest just ended. In celebration, organizers are distributing souvenir skins to active players.
 
 Claim your CS2 skins here: [LINK]"""
 
-# 8 КАРТИНОК (твои прямые ссылки)
 PROMO_IMAGES = [
     "https://i.ibb.co/BHfSKy5q/image.png",
     "https://i.ibb.co/gbv3q4jw/image.png",
@@ -30,9 +30,8 @@ PROMO_IMAGES = [
     "https://i.ibb.co/zhDGVvcj/image.png"
 ]
 
-# ИНТЕРВАЛЫ (секунды)
-RSS_INTERVAL = 1800      # 30 минут
-PROMO_INTERVAL = 16200   # 4.5 часа
+RSS_INTERVAL = 1800
+PROMO_INTERVAL = 16200
 # =========================
 
 logging.basicConfig(
@@ -43,6 +42,14 @@ logger = logging.getLogger(__name__)
 
 promo_index = 0
 
+# Flask приложение для Render
+app_flask = Flask(__name__)
+
+@app_flask.route('/')
+def home():
+    return "Bot is running!"
+
+# ===== ВСЕ ФУНКЦИИ БОТА (те же самые) =====
 def load_config():
     try:
         with open(CONFIG_FILE, "r") as f:
@@ -192,9 +199,13 @@ async def worker():
         
         await asyncio.sleep(60)
 
-def main():
-    logger.info("Bot started - RSS every 30 min, Promo every 4.5 hours")
+def run_bot():
     asyncio.run(worker())
 
+# ===== ЗАПУСК =====
 if __name__ == "__main__":
-    main()
+    # Запускаем бота в отдельном потоке
+    bot_thread = Thread(target=run_bot)
+    bot_thread.start()
+    # Запускаем Flask сервер
+    app_flask.run(host="0.0.0.0", port=8080)
